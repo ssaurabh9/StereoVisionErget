@@ -11,7 +11,7 @@ from mvs.CameraParams_const import *
 from mvs.CameraParams_header import *
 from mvs.MvErrorDefine_const import *
 
-MvCamCtrldll = WinDLL("C:\Program Files (x86)\Common Files\MVS\Runtime\Win64_x64\MvCameraControl.dll")
+MvCamCtrldll = WinDLL(r"C:\Program Files (x86)\Common Files\MVS\Runtime\Win64_x64\MvCameraControl.dll")
 
 # 用于回调函数传入相机实例
 class _MV_PY_OBJECT_(Structure):
@@ -20,6 +20,8 @@ _MV_PY_OBJECT_._fields_ = [
     ('PyObject', py_object),
 ]
 MV_PY_OBJECT = _MV_PY_OBJECT_
+
+ 
 
 class MvCamera():
 

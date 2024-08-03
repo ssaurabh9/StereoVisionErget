@@ -32,7 +32,7 @@ Classes:
 import cv2
 
 from stereovision.point_cloud import PointCloud
-
+from ..roughWrapper import *
 
 class StereoPair(object):
 
@@ -54,7 +54,6 @@ class StereoPair(object):
 
         ``devices`` is an iterable containing the device numbers.
         """
-
         if devices[0] != devices[1]:
             #: Video captures associated with the ``StereoPair``
             self.captures = [cv2.VideoCapture(device) for device in devices]
@@ -74,6 +73,7 @@ class StereoPair(object):
 
     def get_frames(self):
         """Get current frames from cameras."""
+        
         return [capture.read()[1] for capture in self.captures]
 
     def get_frames_singleimage(self):
