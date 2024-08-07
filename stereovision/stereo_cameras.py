@@ -34,8 +34,77 @@ import cv2
 from stereovision.point_cloud import PointCloud
 from ..roughWrapper import *
 
-class StereoPair(object):
+# class StereoPair(object):
 
+#     """
+#     A stereo pair of cameras.
+
+#     This class allows both cameras in a stereo pair to be accessed
+#     simultaneously. It also allows the user to show single frames or videos
+#     captured online with the cameras. It should be instantiated with a context
+#     manager to ensure that the cameras are freed properly after use.
+#     """
+
+#     #: Window names for showing captured frame from each camera
+#     windows = ["{} camera".format(side) for side in ("Left", "Right")]
+
+#     def __init__(self, devices):
+#         """
+#         Initialize cameras.
+
+#         ``devices`` is an iterable containing the device numbers.
+#         """
+#         if devices[0] != devices[1]:
+#             #: Video captures associated with the ``StereoPair``
+#             self.captures = [cv2.VideoCapture(device) for device in devices]
+#         else:
+#             # Stereo images come from a single device, as single image
+#             self.captures = [cv2.VideoCapture(devices[0])]
+#             self.get_frames = self.get_frames_singleimage
+
+#     def __enter__(self):
+#         return self
+
+#     def __exit__(self, type, value, traceback):
+#         for capture in self.captures:
+#             capture.release()
+#         for window in self.windows:
+#             cv2.destroyWindow(window)
+
+#     def get_frames(self):
+#         """Get current frames from cameras."""
+        
+#         return [capture.read()[1] for capture in self.captures]
+
+#     def get_frames_singleimage(self):
+#         """
+#         Get current left and right frames from a single image,
+#         by splitting the image in half.
+#         """
+#         frame = self.captures[0].read()[1]
+#         height, width, colors = frame.shape
+#         left_frame = frame[:, :int(width / 2), :]
+#         right_frame = frame[:, int(width / 2):, :]
+#         return [left_frame, right_frame]
+
+#     def show_frames(self, wait=0):
+#         """
+#         Show current frames from cameras.
+
+#         ``wait`` is the wait interval in milliseconds before the window closes.
+#         """
+#         for window, frame in zip(self.windows, self.get_frames()):
+#             cv2.imshow(window, frame)
+#         cv2.waitKey(wait)
+
+#     def show_videos(self):
+#         """Show video from cameras."""
+#         while True:
+#             self.show_frames(1)
+#             if cv2.waitKey(1) & 0xFF == ord('q'):
+#                 break
+
+class StereoPair(object):
     """
     A stereo pair of cameras.
 
@@ -54,38 +123,34 @@ class StereoPair(object):
 
         ``devices`` is an iterable containing the device numbers.
         """
-        if devices[0] != devices[1]:
-            #: Video captures associated with the ``StereoPair``
-            self.captures = [cv2.VideoCapture(device) for device in devices]
-        else:
-            # Stereo images come from a single device, as single image
-            self.captures = [cv2.VideoCapture(devices[0])]
-            self.get_frames = self.get_frames_singleimage
+        deviceList = enum_devices(device=0, device_way=False)
+        self.cameras = []
+        for device in devices:
+            nConnectionNum = input_num_camera(deviceList)
+            cam, stDeviceList = create_camera(deviceList, nConnectionNum, log=True, log_path=getcwd())
+            self.cameras.append(cam)
+            open_device(cam)
 
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, traceback):
-        for capture in self.captures:
-            capture.release()
-        for window in self.windows:
-            cv2.destroyWindow(window)
+        for cam in self.cameras:
+            # Close device
+            ret = cam.MV_CC_CloseDevice()
+            if ret != 0:
+                print("Close device failed ret[0x%x]" % ret)
+                sys.exit()
 
     def get_frames(self):
         """Get current frames from cameras."""
-        
-        return [capture.read()[1] for capture in self.captures]
-
-    def get_frames_singleimage(self):
-        """
-        Get current left and right frames from a single image,
-        by splitting the image in half.
-        """
-        frame = self.captures[0].read()[1]
-        height, width, colors = frame.shape
-        left_frame = frame[:, :int(width / 2), :]
-        right_frame = frame[:, int(width / 2):, :]
-        return [left_frame, right_frame]
+        frames = []
+        for cam in self.cameras:
+            frame = get_value(cam, param_type="int_value", node_name="PayloadSize")
+            # Convert frame to expected format
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frames.append(frame)
+        return frames
 
     def show_frames(self, wait=0):
         """
@@ -95,7 +160,7 @@ class StereoPair(object):
         """
         for window, frame in zip(self.windows, self.get_frames()):
             cv2.imshow(window, frame)
-        cv2.waitKey(wait)
+            cv2.waitKey(wait)
 
     def show_videos(self):
         """Show video from cameras."""
@@ -103,7 +168,6 @@ class StereoPair(object):
             self.show_frames(1)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-
 
 class ChessboardFinder(StereoPair):
 
